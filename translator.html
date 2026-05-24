@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>轻译 · LightTranslate</title>
+
+<!-- PWA Meta -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="轻译">
+<meta name="theme-color" content="#0f1117">
+<link rel="manifest" href="./manifest.json">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --text: #e6e8ec;
+    --text-secondary: #8b919c;
+    --border: #2a2d37;
+    --accent: #818cf8;
+    --accent-hover: #6366f1;
+    --accent-light: #1e1b4b;
+    --radius: 12px;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+    --shadow: 0 4px 24px rgba(0,0,0,0.3);
+  }
+
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app { width: 100%; max-width: 780px; }
+
+  /* Header */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 32px;
+  }
+  .header .logo {
+    font-size: 22px; font-weight: 700; letter-spacing: -0.5px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .header .logo .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+  }
+  .header .actions { display: flex; gap: 8px; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text);
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: all 0.2s; white-space: nowrap;
+    font-family: inherit;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-primary {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+  }
+  .btn-primary:hover { background: var(--accent-hover); color: #fff; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-icon { padding: 8px; width: 36px; height: 36px; justify-content: center; }
+
+  /* Language Bar */
+  .lang-bar {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+    background: var(--surface); padding: 8px 16px; border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+  .lang-bar select {
+    flex: 1; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font-size: 14px; cursor: pointer;
+    font-family: inherit; outline: none; transition: border-color 0.2s;
+  }
+  .lang-bar select:focus { border-color: var(--accent); }
+  .swap-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border);
+    background: var(--surface); cursor: pointer; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; color: var(--text-secondary); flex-shrink: 0;
+  }
+  .swap-btn:hover { border-color: var(--accent); color: var(--accent); transform: rotate(180deg); }
+
+  /* Panels */
+  .panels {
+    display: grid; grid-template-rows: 1fr auto 1fr; gap: 4px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm);
+  }
+  .panel-input, .panel-output {
+    position: relative;
+  }
+  .panel-input textarea, .panel-output .output-text {
+    width: 100%; min-height: 160px; padding: 20px;
+    border: none; background: transparent; color: var(--text);
+    font-size: 16px; line-height: 1.7; resize: vertical;
+    font-family: inherit; outline: none;
+  }
+  .panel-input textarea::placeholder { color: var(--text-secondary); }
+  .panel-output .output-text {
+    min-height: 160px; white-space: pre-wrap; word-break: break-word;
+  }
+  .panel-output .output-text.placeholder { color: var(--text-secondary); }
+
+  .divider { height: 1px; background: var(--border); margin: 0 20px; }
+
+  .panel-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; border-top: 1px solid var(--border);
+  }
+  .char-count { font-size: 12px; color: var(--text-secondary); }
+  .footer-actions { display: flex; gap: 6px; }
+
+  /* Translate button area */
+  .translate-area {
+    display: flex; justify-content: center; margin: 16px 0;
+  }
+  .btn-translate {
+    padding: 12px 40px; font-size: 15px; border-radius: 10px;
+  }
+
+  /* History */
+  .history-section { margin-top: 40px; }
+  .history-section .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .history-section h3 { font-size: 16px; font-weight: 600; }
+  .history-list { display: flex; flex-direction: column; gap: 8px; }
+  .history-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .history-item:hover { border-color: var(--accent); }
+  .history-item .hi-source { font-size: 14px; color: var(--text); margin-bottom: 4px; }
+  .history-item .hi-target { font-size: 14px; color: var(--text-secondary); }
+  .history-item .hi-meta {
+    font-size: 11px; color: var(--text-secondary); margin-top: 8px;
+    display: flex; gap: 12px;
+  }
+  .history-empty { text-align: center; color: var(--text-secondary); padding: 40px 0; font-size: 14px; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+    padding: 10px 24px; background: var(--text); color: var(--bg);
+    border-radius: 100px; font-size: 13px; font-weight: 500;
+    opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999;
+  }
+  .toast.show { opacity: 1; }
+
+  /* Loading spinner */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite;
+    display: none;
+  }
+  .btn-translate.loading .spinner { display: inline-block; }
+  .btn-translate.loading .btn-label { display: none; }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    body { padding: 20px 12px; }
+    .header { margin-bottom: 20px; }
+    .lang-bar { flex-wrap: nowrap; gap: 6px; padding: 6px 10px; }
+    .lang-bar select { font-size: 13px; padding: 8px 6px; }
+    .panel-input textarea, .panel-output .output-text { min-height: 120px; font-size: 15px; padding: 14px; }
+    .btn-translate { padding: 10px 28px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo"><span class="dot"></span>轻译</div>
+    <div class="actions">
+      <span id="offlineBadge" style="display:none;font-size:11px;padding:4px 10px;border-radius:100px;background:rgba(239,68,68,0.15);color:#ef4444">离线</span>
+      <button class="btn btn-sm" id="btnEngine" title="切换翻译引擎">⚙️ 引擎</button>
+      <button class="btn btn-sm" id="btnClearHistory">🗑 清空历史</button>
+    </div>
+  </div>
+
+  <!-- Language Selector -->
+  <div class="lang-bar">
+    <select id="fromLang">
+      <option value="en">🇬🇧 英语</option>
+      <option value="zh">🇨🇳 中文</option>
+      <option value="ja">🇯🇵 日语</option>
+      <option value="ko">🇰🇷 韩语</option>
+      <option value="fr">🇫🇷 法语</option>
+      <option value="de">🇩🇪 德语</option>
+      <option value="es">🇪🇸 西班牙语</option>
+      <option value="pt">🇧🇷 葡萄牙语</option>
+      <option value="ru">🇷🇺 俄语</option>
+      <option value="ar">🇸🇦 阿拉伯语</option>
+      <option value="auto">🌐 自动检测</option>
+    </select>
+    <button class="swap-btn" id="btnSwap" title="互换语言">⇄</button>
+    <select id="toLang">
+      <option value="en">🇬🇧 英语</option>
+      <option value="zh" selected>🇨🇳 中文</option>
+      <option value="ja">🇯🇵 日语</option>
+      <option value="ko">🇰🇷 韩语</option>
+      <option value="fr">🇫🇷 法语</option>
+      <option value="de">🇩🇪 德语</option>
+      <option value="es">🇪🇸 西班牙语</option>
+      <option value="pt">🇧🇷 葡萄牙语</option>
+      <option value="ru">🇷🇺 俄语</option>
+      <option value="ar">🇸🇦 阿拉伯语</option>
+    </select>
+  </div>
+
+  <!-- Panels -->
+  <div class="panels">
+    <div class="panel-input">
+      <textarea id="inputText" placeholder="输入要翻译的文本…" rows="4"></textarea>
+      <div class="panel-footer">
+        <span class="char-count" id="charCount">0 / 5000</span>
+        <div class="footer-actions">
+          <button class="btn btn-sm" id="btnClear">清空</button>
+        </div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="panel-output">
+      <div class="output-text placeholder" id="outputText">翻译结果将显示在这里…</div>
+      <div class="panel-footer">
+        <span class="char-count" id="engineName">引擎: MyMemory</span>
+        <div class="footer-actions">
+          <button class="btn btn-sm" id="btnCopy" disabled>📋 复制</button>
+          <button class="btn btn-sm" id="btnSpeak" disabled>🔊 朗读</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Translate Button -->
+  <div class="translate-area">
+    <button class="btn btn-primary btn-translate" id="btnTranslate">
+      <span class="btn-label">翻译</span>
+      <span class="spinner"></span>
+    </button>
+  </div>
+
+  <!-- History -->
+  <div class="history-section">
+    <div class="section-header">
+      <h3>翻译历史</h3>
+      <span style="font-size:12px;color:var(--text-secondary)" id="historyCount">0 条记录</span>
+    </div>
+    <div class="history-list" id="historyList">
+      <div class="history-empty">暂无翻译记录</div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Settings Modal -->
+<div id="settingsModal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center">
+  <div style="background:var(--surface);border-radius:var(--radius);padding:24px;max-width:420px;width:90%;box-shadow:var(--shadow)">
+    <h3 style="margin-bottom:16px">选择翻译引擎</h3>
+    <div id="engineList" style="display:flex;flex-direction:column;gap:8px"></div>
+    <button class="btn" style="margin-top:16px;width:100%" id="btnCloseSettings">关闭</button>
+  </div>
+</div>
+
+<script>
+// ==================== Translation Engine Registry ====================
+class TranslationEngine {
+  constructor(config) {
+    this.id = config.id;
+    this.name = config.name;
+    this.description = config.description;
+    this.enabled = config.enabled !== false;
+  }
+
+  async translate(text, from, to) {
+    throw new Error('Not implemented');
+  }
+}
+
+class MyMemoryEngine extends TranslationEngine {
+  constructor() {
+    super({
+      id: 'mymemory',
+      name: 'MyMemory',
+      description: '免费翻译引擎，无需 API Key，适合日常使用'
+    });
+  }
+
+  async translate(text, from, to) {
+    const fromLang = from === 'auto' ? '' : from;
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${fromLang}|${to}`;
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+    if (data.responseStatus !== 200 && data.responseStatus !== '200') {
+      throw new Error(data.responseDetails || '翻译失败');
+    }
+
+    return {
+      text: data.responseData.translatedText,
+      match: data.responseData.match,
+      engine: this.name
+    };
+  }
+}
+
+class LibreTranslateEngine extends TranslationEngine {
+  constructor(apiUrl = 'https://translate.argosopentech.com') {
+    super({
+      id: 'libretranslate',
+      name: 'LibreTranslate',
+      description: '开源翻译引擎，需自行部署或使用公共实例'
+    });
+    this.apiUrl = apiUrl;
+  }
+
+  async translate(text, from, to) {
+    const res = await fetch(`${this.apiUrl}/translate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: text, source: from === 'auto' ? 'auto' : from, target: to, format: 'text' })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return { text: data.translatedText, engine: this.name };
+  }
+}
+
+// ==================== Engine Manager ====================
+class EngineManager {
+  constructor() {
+    this.engines = new Map();
+    this.activeEngineId = localStorage.getItem('activeEngine') || 'mymemory';
+  }
+
+  register(engine) {
+    this.engines.set(engine.id, engine);
+  }
+
+  getActive() {
+    return this.engines.get(this.activeEngineId) || this.engines.get('mymemory');
+  }
+
+  setActive(id) {
+    if (this.engines.has(id)) {
+      this.activeEngineId = id;
+      localStorage.setItem('activeEngine', id);
+    }
+  }
+
+  getAll() {
+    return [...this.engines.values()];
+  }
+}
+
+// ==================== History Manager ====================
+class HistoryManager {
+  constructor() {
+    this.dbName = 'TranslatorDB';
+    this.storeName = 'history';
+    this.db = null;
+  }
+
+  async open() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(this.dbName, 1);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(this.storeName)) {
+          db.createObjectStore(this.storeName, { keyPath: 'id', autoIncrement: true });
+        }
+      };
+      req.onsuccess = (e) => {
+        this.db = e.target.result;
+        resolve();
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async add(record) {
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction(this.storeName, 'readwrite');
+      const store = tx.objectStore(this.storeName);
+      const req = store.add({ ...record, createdAt: Date.now() });
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async getAll(limit = 50) {
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction(this.storeName, 'readonly');
+      const store = tx.objectStore(this.storeName);
+      const req = store.getAll();
+      req.onsuccess = () => {
+        const results = req.result || [];
+        results.sort((a, b) => b.createdAt - a.createdAt);
+        resolve(results.slice(0, limit));
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async clear() {
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction(this.storeName, 'readwrite');
+      const store = tx.objectStore(this.storeName);
+      const req = store.clear();
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+}
+
+// ==================== App ====================
+class App {
+  constructor() {
+    this.engineManager = new EngineManager();
+    this.history = new HistoryManager();
+    this.elements = {};
+  }
+
+  async init() {
+    // Register engines
+    this.engineManager.register(new MyMemoryEngine());
+    this.engineManager.register(new LibreTranslateEngine());
+
+    await this.history.open();
+
+    this.cacheElements();
+    this.bindEvents();
+    this.renderHistory();
+    this.updateEngineDisplay();
+
+    // Keyboard shortcut
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        this.doTranslate();
+      }
+    });
+  }
+
+  cacheElements() {
+    const ids = [
+      'inputText', 'outputText', 'charCount', 'engineName',
+      'btnTranslate', 'btnClear', 'btnCopy', 'btnSpeak', 'btnSwap',
+      'btnEngine', 'btnClearHistory', 'btnCloseSettings',
+      'fromLang', 'toLang', 'historyList', 'historyCount',
+      'toast', 'settingsModal', 'engineList'
+    ];
+    for (const id of ids) {
+      this.elements[id] = document.getElementById(id);
+    }
+    this.$ = (id) => this.elements[id];
+  }
+
+  bindEvents() {
+    this.$('btnTranslate').addEventListener('click', () => this.doTranslate());
+    this.$('btnClear').addEventListener('click', () => {
+      this.$('inputText').value = '';
+      this.$('outputText').textContent = '翻译结果将显示在这里…';
+      this.$('outputText').classList.add('placeholder');
+      this.$('btnCopy').disabled = true;
+      this.$('btnSpeak').disabled = true;
+      this.updateCharCount();
+    });
+    this.$('btnCopy').addEventListener('click', () => this.copyOutput());
+    this.$('btnSpeak').addEventListener('click', () => this.speakOutput());
+    this.$('btnSwap').addEventListener('click', () => this.swapLanguages());
+    this.$('btnEngine').addEventListener('click', () => this.showSettings());
+    this.$('btnClearHistory').addEventListener('click', () => this.clearHistory());
+    this.$('btnCloseSettings').addEventListener('click', () => this.hideSettings());
+    this.$('settingsModal').addEventListener('click', (e) => {
+      if (e.target === this.$('settingsModal')) this.hideSettings();
+    });
+    this.$('inputText').addEventListener('input', () => this.updateCharCount());
+    this.$('fromLang').addEventListener('change', () => this.onLangChange());
+    this.$('toLang').addEventListener('change', () => this.onLangChange());
+  }
+
+  onLangChange() {
+    const from = this.$('fromLang').value;
+    const to = this.$('toLang').value;
+    // Prevent same non-auto languages
+    if (from !== 'auto' && from === to) {
+      this.$('toLang').value = from === 'en' ? 'zh' : 'en';
+    }
+  }
+
+  updateCharCount() {
+    const len = this.$('inputText').value.length;
+    this.$('charCount').textContent = `${len} / 5000`;
+  }
+
+  updateEngineDisplay() {
+    const engine = this.engineManager.getActive();
+    this.$('engineName').textContent = `引擎: ${engine.name}`;
+  }
+
+  async doTranslate() {
+    const text = this.$('inputText').value.trim();
+    if (!text) return;
+
+    const from = this.$('fromLang').value;
+    const to = this.$('toLang').value;
+    const engine = this.engineManager.getActive();
+
+    const btn = this.$('btnTranslate');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    try {
+      const result = await engine.translate(text, from, to);
+      this.$('outputText').textContent = result.text;
+      this.$('outputText').classList.remove('placeholder');
+      this.$('btnCopy').disabled = false;
+      this.$('btnSpeak').disabled = false;
+
+      // Save to history
+      await this.history.add({
+        sourceText: text,
+        translatedText: result.text,
+        fromLang: from,
+        toLang: to,
+        engineName: result.engine
+      });
+      this.renderHistory();
+    } catch (err) {
+      this.$('outputText').textContent = `❌ 翻译失败: ${err.message}`;
+      this.$('outputText').classList.remove('placeholder');
+      this.showToast('翻译失败，请检查网络或切换引擎');
+    } finally {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    }
+  }
+
+  async copyOutput() {
+    const text = this.$('outputText').textContent;
+    if (!text || text.includes('翻译结果将显示在这里') || text.includes('翻译失败')) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      this.showToast('已复制到剪贴板');
+    } catch {
+      // Fallback
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      this.showToast('已复制到剪贴板');
+    }
+  }
+
+  speakOutput() {
+    const text = this.$('outputText').textContent;
+    if (!text || text.includes('翻译结果将显示在这里') || text.includes('翻译失败')) return;
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      const toLang = this.$('toLang').value;
+      const langMap = { en: 'en-US', zh: 'zh-CN', ja: 'ja-JP', ko: 'ko-KR', fr: 'fr-FR', de: 'de-DE', es: 'es-ES', pt: 'pt-BR', ru: 'ru-RU', ar: 'ar-SA' };
+      utterance.lang = langMap[toLang] || toLang;
+      utterance.rate = 0.9;
+      window.speechSynthesis.speak(utterance);
+      this.showToast('正在朗读…');
+    } else {
+      this.showToast('您的浏览器不支持语音朗读');
+    }
+  }
+
+  swapLanguages() {
+    const fromEl = this.$('fromLang');
+    const toEl = this.$('toLang');
+    const fromVal = fromEl.value;
+    const toVal = toEl.value;
+    if (fromVal === 'auto') return;
+    fromEl.value = toVal;
+    toEl.value = fromVal;
+  }
+
+  showSettings() {
+    const list = this.$('engineList');
+    list.innerHTML = '';
+    const engines = this.engineManager.getAll();
+    const activeId = this.engineManager.activeEngineId;
+
+    for (const engine of engines) {
+      const div = document.createElement('div');
+      div.style.cssText = `
+        padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px;
+        cursor: pointer; transition: all 0.2s;
+        ${engine.id === activeId ? 'border-color: var(--accent); background: var(--accent-light);' : ''}
+      `;
+      div.innerHTML = `
+        <div style="font-weight:600;font-size:14px">${engine.name}</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:2px">${engine.description}</div>
+      `;
+      div.addEventListener('click', () => {
+        this.engineManager.setActive(engine.id);
+        this.updateEngineDisplay();
+        this.hideSettings();
+        this.showToast(`已切换到 ${engine.name}`);
+      });
+      list.appendChild(div);
+    }
+
+    this.$('settingsModal').style.display = 'flex';
+  }
+
+  hideSettings() {
+    this.$('settingsModal').style.display = 'none';
+  }
+
+  async renderHistory() {
+    const items = await this.history.getAll();
+    const list = this.$('historyList');
+    const count = this.$('historyCount');
+
+    count.textContent = `${items.length} 条记录`;
+
+    if (items.length === 0) {
+      list.innerHTML = '<div class="history-empty">暂无翻译记录</div>';
+      return;
+    }
+
+    list.innerHTML = items.map(item => {
+      const date = new Date(item.createdAt);
+      const timeStr = `${date.getMonth()+1}/${date.getDate()} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+      const fromLabel = item.fromLang === 'auto' ? '自动' : (item.fromLang || '?');
+      return `
+        <div class="history-item" data-source="${this.escapeHtml(item.sourceText)}" data-target="${this.escapeHtml(item.translatedText)}" data-from="${item.fromLang}" data-to="${item.toLang}">
+          <div class="hi-source">${this.escapeHtml(item.sourceText.substring(0, 80))}${item.sourceText.length > 80 ? '…' : ''}</div>
+          <div class="hi-target">${this.escapeHtml(item.translatedText.substring(0, 80))}${item.translatedText.length > 80 ? '…' : ''}</div>
+          <div class="hi-meta">
+            <span>${fromLabel} → ${item.toLang || '?'}</span>
+            <span>${item.engineName}</span>
+            <span>${timeStr}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Click to re-fill
+    list.querySelectorAll('.history-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const source = el.dataset.source;
+        const from = el.dataset.from;
+        const to = el.dataset.to;
+        this.$('inputText').value = source;
+        this.$('fromLang').value = from;
+        this.$('toLang').value = to;
+        this.updateCharCount();
+        this.$('inputText').focus();
+        this.$('inputText').scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+  }
+
+  async clearHistory() {
+    if (!confirm('确定要清空所有翻译历史吗？此操作不可撤销。')) return;
+    await this.history.clear();
+    this.renderHistory();
+    this.showToast('历史已清空');
+  }
+
+  showToast(msg) {
+    const toast = this.$('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+}
+
+// Bootstrap
+const app = new App();
+app.init();
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+// Offline detection
+function updateOnlineStatus() {
+  const badge = document.getElementById('offlineBadge');
+  if (!navigator.onLine) {
+    badge.style.display = 'inline';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+</script>
+</body>
+</html>

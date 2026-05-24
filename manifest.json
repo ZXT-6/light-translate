@@ -1,0 +1,11 @@
+{
+  "name": "轻译 · LightTranslate",
+  "short_name": "轻译",
+  "description": "简洁高效的翻译工具",
+  "start_url": "./translator.html",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#818cf8",
+  "orientation": "portrait-primary",
+  "icons": []
+}
