@@ -1,6 +1,6 @@
 const CACHE = 'translator-v1';
 const ASSETS = [
-  './translator.html',
+  './',
   './manifest.json'
 ];
 
